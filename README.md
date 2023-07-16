@@ -102,7 +102,7 @@
 ### 实际开发环境
 Tomcat8.0.50
 Intellij IDEA2020.2
-
+MySQL 5.7.19
 
 ### 大致功能模块划分
 ![image](https://github.com/thisisbaiy/-Enterprise_Personnel_Management_System/assets/96861449/f95753fe-f4ef-49fa-b671-c27feb3b393d)
