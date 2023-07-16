@@ -1,4 +1,4 @@
-# 数据库课程设计——企业人事管理系统
+# 数据库课程设计——企业人事管理系统（详细内容见报告）
 数据库课程设计
 ### 业务流程图
 ![image](https://github.com/thisisbaiy/-Enterprise_Personnel_Management_System/assets/96861449/2a37ae48-d1a8-4921-99b4-aa74c91decd6)
