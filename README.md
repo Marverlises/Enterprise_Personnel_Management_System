@@ -1,4 +1,4 @@
-# Enterprise_Personnel_Management_System
+# 数据库课程设计——企业人事管理系统
 数据库课程设计
 报告目录
 
