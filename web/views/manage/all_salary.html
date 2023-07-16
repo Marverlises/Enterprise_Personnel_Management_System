@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Layui</title>
+    <base href="http://localhost:8080/sql_design/">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="layui/css/layui.css" media="all">
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.js"></script>
+    <!-- 注意：如果你直接复制所有代码到本地，上述css路径需要改成你本地的 -->
+</head>
+<body>
+
+<table class="layui-hide" id="layTable" lay-filter="salaryTable"></table>
+
+<script type="text/html" id="toolbarDemo">
+    <div class="layui-btn-container">
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckData">获取选中行数据</button>
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckLength">获取选中数目</button>
+        <button class="layui-btn layui-btn-normal layui-btn-sm" lay-event="addItem">添加新条目</button>
+        <button class="layui-btn  layui-btn-normal layui-btn-sm" lay-event="refresh">刷新</button>
+    </div>
+</script>
+
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+
+
+<script src="layui/layui.js" charset="utf-8"></script>
+
+<script>
+    layui.use(['table', 'jquery'], function () {
+        var table = layui.table;
+        var $ = layui.jquery;
+
+        var formatDate;
+        //第一个实例
+        table.render({
+            elem: '#layTable'
+            , url: 'manage/salaryServlet?action=queryAllSalary' //数据接口,该接口需要自行修改
+            , toolbar: '#toolbarDemo' //开启头部工具栏，并为其绑定左侧模板
+            , defaultToolbar: ['filter', 'exports', 'print', { //自定义头部工具栏右侧图标。如无需自定义，去除该参数即可
+                title: '提示'
+                , layEvent: 'LAYTABLE_TIPS'
+                , icon: 'layui-icon-tips'
+            }]
+            , title: '用户数据表'
+            , method: 'post'
+            , page: false //开启分页
+            , cols: [[ //表头
+                //注意，field的命名类型必须是以小写字母开头，否则识别不到数据,开头之后的字段命名必须与pojo类中的命名一致，否则一样识别不到
+                {type: 'checkbox'},
+                {field: 'salary_id', title: '薪资号', sort: true}
+                , {field: 'employee_id', title: '员工号'}
+                , {field: 'salary_amount', title: '金额'}
+                , {field: 'salary_category', title: '发放原因'}
+                , {
+                    field: 'payment_date', title: '发放时间',
+                    templet: function (data) {
+                        const dateString = data.payment_date;
+                        const monthMap = {
+                            一月: "01",
+                            二月: "02",
+                            三月: "03",
+                            四月: "04",
+                            五月: "05",
+                            六月: "06",
+                            七月: "07",
+                            八月: "08",
+                            九月: "09",
+                            十月: "10",
+                            十一月: "11",
+                            十二月: "12"
+                        };
+                        const [monthString, dayString, yearString] = dateString.split(" ");
+                        const month = monthMap[monthString];
+                        const formattedDate = `${yearString}年${month}月${dayString.slice(0, -1)}日`;
+                        formatDate = `${yearString}-${month}-${dayString.slice(0, -1)}`;
+                        payment_tempdate = `${yearString}-${month}-${dayString.slice(0, -1)}`;
+                        return data.payment_date = payment_tempdate;
+                    }
+                }
+                , {field: 'right', title: '修改数据', toolbar: '#barDemo'}
+            ]]
+        });
+
+        //头工具栏事件
+        table.on('toolbar(salaryTable)', function (obj) {
+            var checkStatus = table.checkStatus(obj.config.id);
+            switch (obj.event) {
+                case 'getCheckData':
+                    var data = checkStatus.data;
+                    layer.alert(JSON.stringify(data));
+                    break;
+                case 'getCheckLength':
+                    var data = checkStatus.data;
+                    layer.msg('选中了：' + data.length + ' 个');
+                    break;
+                case 'addItem':
+                    layer.open({
+                        type: 2
+                        , title: "添加岗位"
+                        , content: 'views/edit/salary_add.html'
+                        , maxmin: true
+                        , area: ['600px', '600px']
+                        , btn: ['确定', '取消']
+                        , yes: function (index, layero) {
+                            var employee_id = $(layero).find('iframe')[0].contentWindow.document.getElementById('employee_id').value;
+                            var salary_amount = $(layero).find('iframe')[0].contentWindow.document.getElementById('money').value;
+                            var salary_category = $(layero).find('iframe')[0].contentWindow.document.getElementById('reason').value;
+                            var date = $(layero).find('iframe')[0].contentWindow.document.getElementById('salaryDate').value;
+
+
+                            if (date.length === 0 || !/^\d+$/.test(salary_amount) || !/^\d+$/.test(employee_id)) {
+                                alert("数据格式不正确！");
+                                return false;
+                            }
+
+                            // 构建请求数据
+                            var requestData = {
+                                'employee_id': employee_id,
+                                'salary_amount': salary_amount,
+                                'salary_category': salary_category,
+                                'date': date
+                            };
+
+                            // 发送 POST 请求
+                            $.ajax({
+                                url: 'manage/salaryServlet?action=insertItem', // 请求的 URL
+                                type: 'POST', // 请求类型
+                                data: requestData, // 请求数据
+                                success: function (response) {
+                                    console.log(response);
+                                    location.reload();
+                                },
+                                error: function (response) {
+                                    // 请求失败的回调函数
+                                    var responseObject = JSON.parse(response.responseText);
+                                    var msg = responseObject.msg;
+                                    alert(msg); // 输出 "数据格式有误！
+                                }
+                            });
+                            layer.close(index);
+
+                        }
+                        , btn2: function (index, layero) {
+                            layer.close(index); //关闭弹窗
+                            return false;// 开启该代码可禁止点击该按钮关闭
+                        }
+                        , success: function (layero, index) {
+                        }
+                    });
+                    break;
+                case 'refresh':
+                    // 刷新当前页面
+                    location.reload();
+                    break;
+                //自定义头工具栏右侧图标 - 提示
+                case 'LAYTABLE_TIPS':
+                    layer.alert('这是工具栏右侧自定义的一个图标按钮');
+                    break;
+            }
+            ;
+        });
+
+        //监听行工具事件
+        table.on('tool(salaryTable)', function (obj) {
+            var data = obj.data; //获得当前行数据
+            var layEvent = obj.event; //获得 lay-event 对应的值（也可以是表头的 event 参数对应的值）
+            if (obj.event === 'del') {
+                layer.confirm('确认删除吗？', function (index) {
+                    obj.del();
+                    // 发送 POST 请求
+                    $.ajax({
+                        url: 'manage/salaryServlet?action=deleteBySalaryEmployeeId', // 请求的 URL
+                        type: 'POST', // 请求类型
+                        data: {
+                            'salary_id': data.salary_id,
+                            'employee_id': data.employee_id
+                        }, // 请求数据
+                        success: function (response) {
+                            location.reload();
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('请求失败', error);
+                        }
+                    });
+                });
+            } else if (obj.event === 'edit') {
+                layer.open({
+                    type: 2
+                    , title: "编辑薪资"
+                    , content: 'views/edit/salary_edit.html'
+                    , maxmin: true
+                    , area: ['600px', '600px']
+                    , btn: ['确定', '取消']
+                    , yes: function (index, layero) {
+                        var employee_id = $(layero).find('iframe')[0].contentWindow.document.getElementById('employee_id').value;
+                        var salary_amount = $(layero).find('iframe')[0].contentWindow.document.getElementById('money').value;
+                        var salary_category = $(layero).find('iframe')[0].contentWindow.document.getElementById('reason').value;
+                        var date = $(layero).find('iframe')[0].contentWindow.document.getElementById('salaryDate').value;
+
+
+                        if (date.length === 0 || !/^\d+$/.test(salary_amount) || !/^\d+$/.test(employee_id)) {
+                            alert("数据格式不正确！");
+                            return false;
+                        }
+
+                        // 构建请求数据
+                        var requestData = {
+                            'salary_id': data.salary_id,
+                            'employee_id': employee_id,
+                            'salary_amount': salary_amount,
+                            'salary_category': salary_category,
+                            'date': date
+                        };
+
+                        // 发送 POST 请求
+                        $.ajax({
+                            url: 'manage/salaryServlet?action=updateItem', // 请求的 URL
+                            type: 'POST', // 请求类型
+                            data: requestData, // 请求数据
+                            success: function (response) {
+                                // 请求成功的回调函数
+                                console.log(response);
+                                // 刷新当前页面
+                                location.reload();
+                            },
+                            error: function (response) {
+                                // 请求失败的回调函数
+                                var responseObject = JSON.parse(response.responseText);
+                                var msg = responseObject.msg;
+                                alert(msg); // 输出 "数据格式有误！
+                            }
+                        });
+                        layer.close(index);
+                    }
+                    , btn2: function (index, layero) {
+                        layer.close(index); //关闭弹窗
+                        return false;// 开启该代码可禁止点击该按钮关闭
+                    }
+                    , success: function (layero, index) {
+                        //进行数据回显
+                        var form = layero.find('iframe').contents().find("#salary_edit_form");
+                        var childFrame = layer.getChildFrame('body', index);
+                        var iframWindow = window['layui-layer-iframe' + index];
+                        childFrame.find("#employee_id").val(data.employee_id);
+                        childFrame.find("#money").val(data.salary_amount);
+                        childFrame.find("#reason").val(data.salary_category);
+                        childFrame.find("#salaryDate").val(formatDate);
+                    }
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+html{
+    position:relative;
+    min-height: 100%;
+    //font-size:62.5%;
+}
+body{
+    padding:0;
+    background:url("../images/loginBG.jpg") no-repeat;
+    background-size: cover;
+    margin-bottom: 8em;
+}
+.form-container{
+    padding:30px;
+    margin:60px 0 0 0;
+    background: rgba(0,0,0,0.7);
+    color:#ffffff;
+    border-radius: 10px;
+    -webkit-box-shadow: 11px 15px 13px -3px rgba(0,0,0,0.75);
+    -moz-box-shadow: 11px 15px 13px -3px rgba(0,0,0,0.75);
+    box-shadow: 11px 15px 13px -3px rgba(0,0,0,0.75);
+}
+.form-container h2{
+    text-align: center;
+}
+.footer {
+    padding:1.3em;
+    margin:0 0 0 0;
+    text-align: center;
+    background: #333333;
+    color: #ffffff;
+    width:100%;
+    heigth:4em;
+    position:absolute;
+    bottom: 0;
+}

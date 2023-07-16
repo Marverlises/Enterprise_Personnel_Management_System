@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Layui</title>
+    <base href="http://localhost:8080/sql_design/">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="layui/css/layui.css" media="all">
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.js"></script>
+    <!-- 注意：如果你直接复制所有代码到本地，上述css路径需要改成你本地的 -->
+</head>
+<body>
+
+<table class="layui-hide" id="layTable" lay-filter="employeeTable"></table>
+
+<script src="layui/layui.js" charset="utf-8"></script>
+<!-- 注意：如果你直接复制所有代码到本地，上述 JS 路径需要改成你本地的 -->
+
+<script>
+
+    function RequestParameter() {
+        var url = window.location.search; //获取url中"?"符后的字串
+        var theRequest = new Object();
+        if (url.indexOf("?") != -1) {
+            var str = url.substr(1);
+            var strs = str.split("&");
+            for (var i = 0; i < strs.length; i++) {
+                theRequest[strs[i].split("=")[0]] = (strs[i].split("=")[1]);
+            }
+        }
+        return theRequest
+    }
+
+    var department_id = RequestParameter()["department_id"];
+
+    layui.use(['table', 'jquery'], function () {
+        var table = layui.table;
+        var $ = layui.jquery;
+        //以下两个变量方便后续调用
+        var birth_tempdate;
+        var hire_tempdate;
+        //第一个实例
+        table.render({
+            elem: '#layTable'
+            , url: 'manage/departmentServlet?action=queryDepartmentAllEmp&department_id=' + department_id //数据接口,该接口需要自行修改
+            , title: '用户数据表'
+            , method: 'post'
+            , page: false //开启分页
+            , cols: [[ //表头
+                //注意，field的命名类型必须是以小写字母开头，否则识别不到数据,开头之后的字段命名必须与pojo类中的命名一致，否则一样识别不到
+                {field: 'employee_id', title: '员工号', sort: true}
+                , {field: 'employee_name', title: '姓名'}
+                , {
+                    field: 'gender', title: '性别', sort: true,//下面一行代码为格式化数据
+                    templet: function (data) {
+                        return data.gender === 'male' ? '男' : '女';
+                    }
+                }
+                , {
+                    field: 'birthdate', title: '出生日期',
+                    templet: function (data) {
+                        const dateString = data.birthdate;
+                        const monthMap = {
+                            一月: "01",
+                            二月: "02",
+                            三月: "03",
+                            四月: "04",
+                            五月: "05",
+                            六月: "06",
+                            七月: "07",
+                            八月: "08",
+                            九月: "09",
+                            十月: "10",
+                            十一月: "11",
+                            十二月: "12"
+                        };
+                        const [monthString, dayString, yearString] = dateString.split(" ");
+                        const month = monthMap[monthString];
+                        const formattedDate = `${yearString}年${month}月${dayString.slice(0, -1)}日`;
+                        birth_tempdate = `${yearString}-${month}-${dayString.slice(0, -1)}`;
+                        return data.birthdate = formattedDate;
+                    }
+                }
+                , {field: 'phone_number', title: '联系电话'}
+                , {field: 'address', title: '地址'}
+                , {field: 'email', title: '邮箱'}
+                , {
+                    field: 'hire_date', title: '雇佣日期',
+                    templet: function (data) {
+                        const dateString = data.hire_date;
+                        const monthMap = {
+                            一月: "01",
+                            二月: "02",
+                            三月: "03",
+                            四月: "04",
+                            五月: "05",
+                            六月: "06",
+                            七月: "07",
+                            八月: "08",
+                            九月: "09",
+                            十月: "10",
+                            十一月: "11",
+                            十二月: "12"
+                        };
+                        const [monthString, dayString, yearString] = dateString.split(" ");
+                        const month = monthMap[monthString];
+                        const formattedDate = `${yearString}年${month}月${dayString.slice(0, -1)}日`;
+                        hire_tempdate = `${yearString}-${month}-${dayString.slice(0, -1)}`;
+                        return data.hire_date = formattedDate;
+                    }
+                }
+                , {field: 'qualification', title: '个人文凭'}
+                , {
+                    field: 'position_id', title: '职位',
+                    templet: function (data) {
+                        return data.position_id === undefined ? "未赋值" : data.position_id;
+                    }
+                }
+                , {
+                    field: 'department_id', title: '所属部门',
+                    templet: function (data) {
+                        return data.department_id === undefined ? "未赋值" : data.department_id;
+                    }
+                }
+            ]]
+        });
+    });
+</script>
+
+
+</body>
+</html>

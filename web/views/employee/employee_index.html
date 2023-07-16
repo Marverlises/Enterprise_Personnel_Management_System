@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>设置我的资料</title>
+    <base href="http://localhost:8080/sql_design/">
+    <meta name="renderer" content="webkit">
+    <base href="http://localhost:8080/sql_design/">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" href="layui/css/layui.css" media="all">
+</head>
+<body>
+
+<div class="layui-fluid">
+    <div class="layui-row layui-col-space15">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-header">我的资料</div>
+                <div class="layui-card-body" pad15>
+
+                    <div class="layui-form" lay-filter="">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">我的角色</label>
+                            <div class="layui-input-inline">
+                                <select name="role" lay-verify="">
+                                    <option value="1" disabled>管理员</option>
+                                    <option value="3" selected>员工</option>
+                                </select>
+                            </div>
+                            <div class="layui-form-mid layui-word-aux">当前角色不可更改为其它角色</div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">个人ID</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="empId" value="" readonly class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">姓名</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="username" value="" readonly class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">性别</label>
+                            <div class="layui-input-block" >
+                                <input type="radio" id="man" name="sex" value="男" title="男">
+                                <input type="radio" id="woman" name="sex" value="女" title="女" checked>
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">出生日期</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="birthday" value="" readonly class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">电话号码</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="phone_number" value="" readonly class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">住址</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="address" value="" readonly class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">个人邮箱</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="email" value="" readonly class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">雇佣日期</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="hire_date" value="" readonly class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">所属岗位</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="job" value="" readonly class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">所属部门</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="department" value="" readonly class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">薪资状况</label>
+                            <div class="layui-input-inline">
+                                <input type="text" id="salary" value="" readonly class="layui-input">
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="layui-card">
+                <div class="layui-card-header">打卡</div>
+                <div class="layui-card-body">
+                    <div class="layui-btn-container">
+                        <button class="layui-btn layui-btn-fluid" id="start">上班打卡</button>
+                        <button class="layui-btn layui-btn-fluid" id="end">下班打卡</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="layui/layui.js"></script>
+
+
+<script>
+    layui.use(['table', 'jquery'], function () {
+        var table = layui.table;
+        var $ = layui.jquery;
+
+        // 发送 POST 请求
+        $.ajax({
+            url: 'employeeView?action=queryAllData', // 请求的 URL
+            type: 'POST', // 请求类型
+            success: function (response) {
+                const jsonObject = JSON.parse(response);
+                data = jsonObject;
+                const dateString1 = data.birthdate;
+                const dateString2 = data.hire_date;
+
+                const monthMap = {
+                    一月: "01",
+                    二月: "02",
+                    三月: "03",
+                    四月: "04",
+                    五月: "05",
+                    六月: "06",
+                    七月: "07",
+                    八月: "08",
+                    九月: "09",
+                    十月: "10",
+                    十一月: "11",
+                    十二月: "12"
+                };
+                const [monthString1, dayString1, yearString1] = dateString1.split(" ");
+                const [monthString2, dayString2, yearString2] = dateString2.split(" ");
+
+                const month1 = monthMap[monthString1];
+                const formattedDate1 = `${yearString1}年${month1}月${dayString1.slice(0, -1)}日`;
+                const month2 = monthMap[monthString2];
+                const formattedDate2 = `${yearString2}年${month2}月${dayString2.slice(0, -1)}日`;
+                document.getElementById("empId").value = data.employee_id;
+                document.getElementById("username").value = data.employee_name;
+                document.getElementById("man").checked = data.gender === "男";
+                document.getElementById("woman").checked = data.gender === "女";
+                document.getElementById("birthday").value = formattedDate1;
+                document.getElementById("phone_number").value = data.phone_number;
+                document.getElementById("address").value = data.address;
+                document.getElementById("email").value = data.email;
+                document.getElementById("hire_date").value = formattedDate2;
+                document.getElementById("salary").value = data.salary_amount;
+                document.getElementById("job").value = data.position_id === null ? "未赋值" : data.position_id;
+                document.getElementById("department").value = data.department_id === null ? "未赋值" : data.department_id;
+            },
+            error: function (response) {
+                // 请求失败的回调函数
+                var responseObject = JSON.parse(response.responseText);
+                var msg = responseObject.msg;
+                alert(msg); // 输出 "数据格式有误！
+            }
+        });
+
+        $(document).ready(function() {
+            $("#start").click(function() {
+                var requestData = {
+                    'employeeId':document.getElementById("empId").value
+                }
+                // 发送 POST 请求
+                $.ajax({
+                    url: 'employeeView?action=startWork', // 请求的 URL
+                    type: 'POST', // 请求类型
+                    data: requestData, // 请求数据
+                    success: function (response) {
+                        alert("打卡成功！")
+                        location.reload();
+                    },
+                    error: function (response) {
+                        // 请求失败的回调函数
+                        var responseObject = JSON.parse(response.responseText);
+                        var msg = responseObject.msg;
+                        alert(msg); // 输出 "数据格式有误！
+                    }
+                });
+            });
+            $("#end").click(function() {
+                var requestData = {
+                    'employeeId':document.getElementById("empId").value
+                }
+                $.ajax({
+                    url: 'employeeView?action=endWork', // 请求的 URL
+                    type: 'POST', // 请求类型
+                    data: requestData, // 请求数据
+                    success: function (response) {
+                        alert("打卡成功！")
+                        location.reload();
+                    },
+                    error: function (response) {
+                        // 请求失败的回调函数
+                        var responseObject = JSON.parse(response.responseText);
+                        var msg = responseObject.msg;
+                        alert(msg); // 输出 "数据格式有误！
+                    }
+                });
+            });
+
+        });
+    });
+</script>
+
+</body>
+</html>

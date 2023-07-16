@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>员工考勤管理</title>
+    <base href="http://localhost:8080/sql_design/">
+    <link rel="stylesheet" href="layui/css/layui.css">
+</head>
+<body>
+
+
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+    <legend></legend>
+</fieldset>
+
+<div class="layui-row">
+    <div class="layui-col-xs6">
+        <div class="grid-demo grid-demo-bg1">
+            <div id="attendance_line" style="width: 100%; height: 500px;"></div>
+        </div>
+    </div>
+    <div class="layui-col-xs6">
+        <div class="grid-demo">
+            <div id="attendance_doughnut" style="width: 100%; height: 500px"></div>
+        </div>
+    </div>
+</div>
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+    <legend></legend>
+</fieldset>
+
+<div class="layui-row">
+    <table class="layui-hide" id="layTable" lay-filter="attendanceTable"></table>
+</div>
+
+<script type="text/html" id="toolbarDemo">
+    <div class="layui-btn-container">
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckData">获取选中行数据</button>
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckLength">获取选中数目</button>
+        <button class="layui-btn  layui-btn-normal layui-btn-sm" lay-event="deleteByWeek">删除一周之前的数据</button>
+        <button class="layui-btn  layui-btn-normal layui-btn-sm" lay-event="refresh">刷新</button>
+    </div>
+</script>
+
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+
+
+<script type="text/javascript" src="layui/layui.js"></script>
+<script type="text/javascript">
+    layui.config({
+        version: 1,
+        base: 'echarts/' //这个就是你放Echart.js的目录
+    }).use(['element', 'echarts', 'carousel', 'table', 'jquery'], function () {
+        var element = layui.element;
+        var carousel = layui.carousel;
+        var echarts = layui.echarts;
+        var table = layui.table;
+        var $ = layui.jquery;
+
+        // 初始化 ECharts 实例
+        var myChart_line = echarts.init(document.getElementById("attendance_line"));
+        var option_line;
+
+        const colors = ['#5470C6', '#EE6666'];
+
+
+        //=============================================================================
+
+
+        //第一个实例
+        table.render({
+            elem: '#layTable'
+            , url: 'manage/attendanceServlet?action=queryAllLog' //数据接口,该接口需要自行修改
+            , toolbar: '#toolbarDemo' //开启头部工具栏，并为其绑定左侧模板
+            , defaultToolbar: ['filter', 'exports', 'print', { //自定义头部工具栏右侧图标。如无需自定义，去除该参数即可
+                title: '提示'
+                , layEvent: 'LAYTABLE_TIPS'
+                , icon: 'layui-icon-tips'
+            }]
+            , title: '用户数据表'
+            , method: 'post'
+            , page: false //开启分页
+            , cols: [[ //表头
+                //注意，field的命名类型必须是以小写字母开头，否则识别不到数据,开头之后的字段命名必须与pojo类中的命名一致，否则一样识别不到
+                {type: 'checkbox'},
+                {field: 'attendance_id', title: '记录号', sort: true}
+                , {field: 'employee_id', title: '员工号'}
+                , {
+                    field: 'log_time', title: '考勤时间',
+                    templet: function (data) {
+                        // 输入的时间字符串
+                        var inputTime = data.log_time;
+                        // 创建日期对象
+                        var date = new Date(inputTime);
+                        // 获取年份、月份、日期、小时和分钟
+                        var year = date.getFullYear();
+                        var month = date.getMonth() + 1;
+                        var day = date.getDate();
+                        var hour = date.getHours();
+                        var minute = date.getMinutes();
+                        var second = date.getSeconds();
+                        // 格式化月份、日期、小时和分钟为两位数
+                        month = month < 10 ? "0" + month : month;
+                        day = day < 10 ? "0" + day : day;
+                        hour = hour < 10 ? "0" + hour : hour;
+                        minute = minute < 10 ? "0" + minute : minute;
+                        second = second < 10 ? "0" + second : second;
+                        // 构建转换后的时间字符串
+                        var outputTime = year + "年" + month + "月" + day + "日-" + hour + ":" + minute + ":" + second;
+                        return data.log_time = outputTime;
+                    }
+                }
+                , {
+                    field: 'log_type', title: '考勤类型',//下面一行代码为格式化数据
+                    templet: function (data) {
+                        return data.log_type === 0 ? "上班考勤记录" : "下班考勤记录";
+                    }
+                }
+                , {
+                    field: 'late_type', title: '是否迟到/早退',//下面一行代码为格式化数据
+                    templet: function (data) {
+                        var result = "";
+                        if (data.late_type === 0) {
+                            result = "正常出勤";
+                        } else if (data.late_type === 1) {
+                            result = "上班迟到";
+                        } else if (data.late_type === 2) {
+                            result = "下班早退";
+                        }
+                        return result;
+                    }
+                }
+                , {field: 'right', title: '修改数据', toolbar: '#barDemo'}
+            ]]
+        });
+
+        //头工具栏事件
+        // table.on(“控件”(“表格的绑定名字”))
+        table.on('toolbar(attendanceTable)', function (obj) {
+            var checkStatus = table.checkStatus(obj.config.id);
+            switch (obj.event) {
+                case 'getCheckData':
+                    var data = checkStatus.data;
+                    layer.alert(JSON.stringify(data));
+                    break;
+                case 'getCheckLength':
+                    var data = checkStatus.data;
+                    layer.msg('选中了：' + data.length + ' 个');
+                    break;
+                case 'refresh':
+                    location.reload();
+                    break;
+                case 'deleteByWeek':
+                    // 发送 POST 请求
+                    $.ajax({
+                        url: 'manage/attendanceServlet?action=deleteByWeek', // 请求的 URL
+                        type: 'POST', // 请求类型
+                        success: function (response) {
+                            // 刷新当前页面
+                            location.reload();
+                        },
+                        error: function (xhr, status, error) {
+                            // 请求失败的回调函数
+                            alert("已经删除过啦！");
+                        }
+                    });
+                    break;
+                case 'LAYTABLE_TIPS':
+                    layer.alert('这是工具栏右侧自定义的一个图标按钮');
+                    break;
+            }
+            ;
+        });
+
+        //监听行工具事件
+        table.on('tool(attendanceTable)', function (obj) {
+            var data = obj.data; //获得当前行数据
+            var layEvent = obj.event; //获得 lay-event 对应的值（也可以是表头的 event 参数对应的值）
+            if (obj.event === 'del') {
+                layer.confirm('确认删除吗？', function (index) {
+                    obj.del();
+                    // 发送 POST 请求
+                    $.ajax({
+                        url: 'manage/attendanceServlet?action=deleteLogById', // 请求的 URL
+                        type: 'POST', // 请求类型
+                        data: {
+                            'attendance_id': data.attendance_id
+                        }, // 请求数据
+                        success: function (response) {
+                            // 刷新当前页面
+                            location.reload();
+                        },
+                        error: function (xhr, status, error) {
+                            // 请求失败的回调函数
+                            alert("删除失败！");
+                            console.error('请求失败', error);
+                        }
+                    });
+                });
+            }
+        });
+        //=============================================================================
+        // 发送 POST 请求
+        $.ajax({
+            url: 'manage/attendanceServlet?action=getLogTypeNumber', // 请求的 URL
+            type: 'POST', // 请求类型
+            success: function (response) {
+                var tempArr = JSON.parse(response);
+
+                var myChart_doughnut = echarts.init(document.getElementById("attendance_doughnut"));
+                var option_doughnut;
+                option_doughnut = {
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    legend: {
+                        top: '5%',
+                        left: 'center',
+                        // doesn't perfectly work with our tricks, disable it
+                        selectedMode: false
+                    },
+                    series: [
+                        {
+                            name: 'Access From',
+                            type: 'pie',
+                            radius: ['40%', '70%'],
+                            center: ['50%', '70%'],
+                            // adjust the start angle
+                            startAngle: 180,
+                            label: {
+                                show: true,
+                                formatter(param) {
+                                    // correct the percentage
+                                    return param.name + ' (' + param.percent * 2 + '%)';
+                                }
+                            },
+                            data: [
+                                {value: parseInt(tempArr[0]), name: '正常出勤'},
+                                {value: parseInt(tempArr[1]), name: '上班迟到'},
+                                {value: parseInt(tempArr[2]), name: '下班早退'},
+                                {
+                                    // make an record to fill the bottom 50%
+                                    value: parseInt(tempArr[0]) + parseInt(tempArr[1]) + parseInt(tempArr[2]),
+                                    itemStyle: {
+                                        // stop the chart from rendering this piece
+                                        color: 'none',
+                                        decal: {
+                                            symbol: 'none'
+                                        }
+                                    },
+                                    label: {
+                                        show: false
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                };
+                myChart_doughnut.setOption(option_doughnut);
+            },
+            error: function (xhr, status, error) {
+                // 请求失败的回调函数
+                alert("请求记录数失败！");
+            }
+        });
+
+        //=============================================================================
+        $.ajax({
+            url: 'manage/attendanceServlet?action=queryLatestWeekLog', // 请求的 URL
+            type: 'POST', // 请求类型
+            success: function (response) {
+                var data = JSON.parse(response);
+                var formattedDates = [];
+                for (var i = 0; i < data.day.length; i++) {
+                    var dateObj = data.day[i];
+                    var year = dateObj.year;
+                    var month = dateObj.month;
+                    var day = dateObj.day;
+                    // 创建一个新的Date对象，注意月份需要减1，因为JavaScript中的月份是从0开始的
+                    var date = new Date(year, month - 1, day);
+                    // 使用Date对象的方法来获取年、月、日
+                    var formattedDate = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+                    formattedDates.push(formattedDate);
+                }
+
+                var dayNormalNum = data.dayNormalNum;
+                var dayLateNum = data.dayLateNum;
+                // 刷新当前页面
+                option_line = {
+                    color: colors,
+                    tooltip: {
+                        trigger: 'none',
+                        axisPointer: {
+                            type: 'cross'
+                        }
+                    },
+                    legend: {},
+                    grid: {
+                        top: 70,
+                        bottom: 50
+                    },
+                    xAxis: [
+                        {
+                            type: 'category',
+                            axisTick: {
+                                alignWithLabel: true
+                            },
+                            axisLine: {
+                                onZero: false,
+                                lineStyle: {
+                                    color: colors[1]
+                                }
+                            },
+                            axisPointer: {
+                                label: {
+                                    formatter: function (params) {
+                                        return (
+                                            params.value +
+                                            (params.seriesData.length ? '：' + params.seriesData[0].data : '')
+                                        );
+                                    }
+                                }
+                            },
+                            // prettier-ignore
+                            data: formattedDates
+                        },
+                        {
+                            type: 'category',
+                            axisTick: {
+                                alignWithLabel: true
+                            },
+                            axisLine: {
+                                onZero: false,
+                                lineStyle: {
+                                    color: colors[0]
+                                }
+                            },
+                            axisPointer: {
+                                label: {
+                                    formatter: function (params) {
+                                        return (
+                                            params.value +
+                                            (params.seriesData.length ? '：' + params.seriesData[0].data : '')
+                                        );
+                                    }
+                                }
+                            },
+                            // prettier-ignore
+                            data: formattedDates
+                        }
+                    ],
+                    yAxis: [
+                        {
+                            type: 'value'
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '正常出勤',
+                            type: 'line',
+                            xAxisIndex: 1,
+                            smooth: true,
+                            emphasis: {
+                                focus: 'series'
+                            },
+                            data: dayNormalNum
+                        },
+                        {
+                            name: '缺勤',
+                            type: 'line',
+                            smooth: true,
+                            emphasis: {
+                                focus: 'series'
+                            },
+                            data: dayLateNum
+                        }
+                    ]
+                };
+                myChart_line.setOption(option_line);
+            },
+            error: function (xhr, status, error) {
+                // 请求失败的回调函数
+            }
+        });
+
+
+    });
+
+
+</script>
+</body>
+</html>

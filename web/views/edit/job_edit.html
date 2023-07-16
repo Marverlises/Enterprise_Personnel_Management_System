@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Layui</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="../../layui/css/layui.css" media="all">
+    <!-- 注意：如果你直接复制所有代码到本地，上述css路径需要改成你本地的 -->
+</head>
+<body>
+
+<div class="layui-row">
+    <div class="layui-col-md4">
+        <div class="grid-demo grid-demo-bg1">&ensp;</div>
+    </div>
+    <div class="layui-col-md4">
+        <div class="grid-demo">
+
+            <form class="layui-form layui-form-pane" action="" id="department_edit_form">
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label" style="width: 20%;margin-top: 50px; margin-left: 100px">岗位名</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="title" id="job_name" autocomplete="off" lay-verify="required"
+                               placeholder="请输入岗位名"
+                               class="layui-input" style="margin-top: 50px;">
+                    </div>
+                </div>
+
+                <div class="layui-form-item">
+                    <label class="layui-form-label"
+                           style="width: 20%; margin-left: 100px">岗位职责</label>
+                    <div class="layui-input-inline">
+                        <input type="text" name="title" id="job_respon" autocomplete="off" lay-verify="required"
+                               placeholder="请输入岗位职责"
+                               class="layui-input">
+                    </div>
+                </div>
+            </form>
+
+        </div>
+    </div>
+    <div class="layui-col-md4">
+        <div class="grid-demo grid-demo-bg1">&ensp;</div>
+    </div>
+</div>
+
+<script src="../../layui/layui.js" charset="utf-8"></script>
+<!-- 注意：如果你直接复制所有代码到本地，上述 JS 路径需要改成你本地的 -->
+<script>
+    layui.use(['form'], function () {
+        var form = layui.form
+
+    });
+</script>
+
+</body>
+</html>

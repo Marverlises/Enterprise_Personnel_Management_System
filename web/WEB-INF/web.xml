@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+         version="4.0">
+
+    <!--过滤器一般我们配置在上面-->
+    <filter>
+        <filter-name>AuthFilter</filter-name>
+        <filter-class>com.by.coursedesign.filter.AuthFilter</filter-class>
+        <init-param>
+            <param-name>excludedUrls</param-name>
+            <param-value> </param-value>
+        </init-param>
+    </filter>
+    <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
+        <url-pattern>/views/edit/*</url-pattern>
+        <url-pattern>/views/manage/*</url-pattern>
+        <url-pattern>/views/employee/*</url-pattern>
+        <url-pattern>/manage/*</url-pattern>
+        <url-pattern>/employeeView</url-pattern>
+    </filter-mapping>
+
+
+    <servlet>
+        <servlet-name>LoginServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.LoginServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>LoginServlet</servlet-name>
+        <url-pattern>/userServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>EmployeeServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.EmployeeServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>EmployeeServlet</servlet-name>
+        <url-pattern>/manage/employeeServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>DepartmentServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.DepartmentServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>DepartmentServlet</servlet-name>
+        <url-pattern>/manage/departmentServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>JobServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.JobServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>JobServlet</servlet-name>
+        <url-pattern>/manage/jobServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>AttendanceServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.AttendanceServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>AttendanceServlet</servlet-name>
+        <url-pattern>/manage/attendanceServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>SalaryServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.SalaryServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>SalaryServlet</servlet-name>
+        <url-pattern>/manage/salaryServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>TrainingServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.TrainingServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>TrainingServlet</servlet-name>
+        <url-pattern>/manage/trainingServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>EmptrainingServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.EmptrainingServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>EmptrainingServlet</servlet-name>
+        <url-pattern>/manage/emptrainingServlet</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>EmployeeViewServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.EmployeeViewServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>EmployeeViewServlet</servlet-name>
+        <url-pattern>/employeeView</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>RSAServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.RSAServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RSAServlet</servlet-name>
+        <url-pattern>/rsaServlet</url-pattern>
+    </servlet-mapping>
+
+    <!--以下为一个测试servlet-->
+    <servlet>
+        <servlet-name>TestServlet</servlet-name>
+        <servlet-class>com.by.coursedesign.web.TestServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>TestServlet</servlet-name>
+        <url-pattern>/test</url-pattern>
+    </servlet-mapping>
+</web-app>

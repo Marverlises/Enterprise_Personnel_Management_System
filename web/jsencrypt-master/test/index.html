@@ -1,0 +1,17 @@
+---
+title: Testing JSEncrypt
+layout: default
+---
+
+<link href="libs/mocha.css" rel="stylesheet" type="text/css" />
+<div id="mocha"></div>
+<script type="text/javascript" src="libs/index.js"></script>
+<script type="text/javascript" src="libs/mocha.js"></script>
+<script>
+    mocha.setup("bdd");
+</script>
+<script type="text/javascript" src="test.rsa.bundle.js"></script>
+<script>
+    mocha.checkLeaks();
+    mocha.run();
+</script>

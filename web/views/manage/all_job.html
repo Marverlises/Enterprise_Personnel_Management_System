@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Layui</title>
+    <base href="http://localhost:8080/sql_design/">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="layui/css/layui.css" media="all">
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.js"></script>
+    <!-- 注意：如果你直接复制所有代码到本地，上述css路径需要改成你本地的 -->
+</head>
+<body>
+
+<table class="layui-hide" id="layTable" lay-filter="jobTable"></table>
+
+<script type="text/html" id="toolbarDemo">
+    <div class="layui-btn-container">
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckData">获取选中行数据</button>
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckLength">获取选中数目</button>
+        <button class="layui-btn layui-btn-sm" lay-event="addJob">添加新岗位</button>
+        <button class="layui-btn  layui-btn-normal layui-btn-sm" lay-event="refresh">刷新</button>
+    </div>
+</script>
+
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+
+
+<script src="layui/layui.js" charset="utf-8"></script>
+
+<script>
+    layui.use(['table', 'jquery'], function () {
+        var table = layui.table;
+        var $ = layui.jquery;
+        //第一个实例
+        table.render({
+            elem: '#layTable'
+            , url: 'manage/jobServlet?action=queryAllJob' //数据接口,该接口需要自行修改
+            , toolbar: '#toolbarDemo' //开启头部工具栏，并为其绑定左侧模板
+            , defaultToolbar: ['filter', 'exports', 'print', { //自定义头部工具栏右侧图标。如无需自定义，去除该参数即可
+                title: '提示'
+                , layEvent: 'LAYTABLE_TIPS'
+                , icon: 'layui-icon-tips'
+            }]
+            , title: '用户数据表'
+            , method: 'post'
+            , page: false //开启分页
+            , cols: [[ //表头
+                //注意，field的命名类型必须是以小写字母开头，否则识别不到数据,开头之后的字段命名必须与pojo类中的命名一致，否则一样识别不到
+                {type: 'checkbox'},
+                {field: 'position_id', title: '岗位号', sort: true}
+                , {field: 'position_name', title: '岗位名'}
+                , {field: 'responsibilities', title: '岗位职责'}
+                , {field: 'right', title: '修改数据', toolbar: '#barDemo'}
+            ]]
+        });
+
+        //头工具栏事件
+        table.on('toolbar(jobTable)', function (obj) {
+            var checkStatus = table.checkStatus(obj.config.id);
+            switch (obj.event) {
+                case 'getCheckData':
+                    var data = checkStatus.data;
+                    layer.alert(JSON.stringify(data));
+                    break;
+                case 'getCheckLength':
+                    var data = checkStatus.data;
+                    layer.msg('选中了：' + data.length + ' 个');
+                    break;
+                case 'addJob':
+                    layer.open({
+                        type: 2
+                        , title: "添加岗位"
+                        , content: 'views/edit/job_add.html'
+                        , maxmin: true
+                        , area: ['600px', '400px']
+                        , btn: ['确定', '取消']
+                        , yes: function (index, layero) {
+                            var job_id = $(layero).find('iframe')[0].contentWindow.document.getElementById('job_id').value;
+                            var job_name = $(layero).find('iframe')[0].contentWindow.document.getElementById('job_name').value;
+                            var job_respon = $(layero).find('iframe')[0].contentWindow.document.getElementById('job_respon').value;
+
+
+                            var tableData = table.cache['layTable'];
+                            var valueExists = false;
+                            var columnName = "position_id"; // 假设你要判断的列名是 "date"
+
+                            if (job_respon.length === 0 || job_name.length === 0 || !/^\d+$/.test(job_id)) {
+                                alert("数据格式不正确！");
+                                return false;
+                            }
+
+                            for (var i = 0; i < tableData.length; i++) {
+                                if (tableData[i][columnName] === parseInt(job_id)) {
+                                    layer.alert("岗位ID已经存在！");
+                                    return false;
+                                }
+                            }
+                            // 构建请求数据
+                            var requestData = {
+                                'position_id': job_id,
+                                'job_name': job_name,
+                                'job_responsibility': job_respon
+                            };
+
+                            // 发送 POST 请求
+                            $.ajax({
+                                url: 'manage/jobServlet?action=addJob', // 请求的 URL
+                                type: 'POST', // 请求类型
+                                data: requestData, // 请求数据
+                                success: function (response) {
+                                    console.log(response);
+                                    // 刷新当前页面
+                                    location.reload();
+                                },
+                                error: function (response) {
+                                    // 请求失败的回调函数
+                                    var responseObject = JSON.parse(response.responseText);
+                                    var msg = responseObject.msg;
+                                    alert(msg); // 输出 "数据格式有误！
+                                }
+                            });
+                            layer.close(index);
+
+                        }
+                        , btn2: function (index, layero) {
+                            layer.close(index); //关闭弹窗
+                            return false;// 开启该代码可禁止点击该按钮关闭
+                        }
+                        , success: function (layero, index) {
+                        }
+                    });
+                    break;
+                case 'refresh':
+                    // 刷新当前页面
+                    location.reload();
+                    break;
+                //自定义头工具栏右侧图标 - 提示
+                case 'LAYTABLE_TIPS':
+                    layer.alert('这是工具栏右侧自定义的一个图标按钮');
+                    break;
+            }
+            ;
+        });
+
+        //监听行工具事件
+        table.on('tool(jobTable)', function (obj) {
+            var data = obj.data; //获得当前行数据
+            var layEvent = obj.event; //获得 lay-event 对应的值（也可以是表头的 event 参数对应的值）
+            if (obj.event === 'del') {
+                layer.confirm('确认删除吗？', function (index) {
+                    obj.del();
+                    // 发送 POST 请求
+                    $.ajax({
+                        url: 'manage/jobServlet?action=deleteJobById', // 请求的 URL
+                        type: 'POST', // 请求类型
+                        data: {
+                            'position_id': data.position_id
+                        }, // 请求数据
+                        success: function (response) {
+                            console.log(response);
+                            // 刷新当前页面
+                            location.reload();
+                        },
+                        error: function (xhr, status, error) {
+                            // 请求失败的回调函数
+                            console.error('请求失败', error);
+                        }
+                    });
+                });
+            } else if (obj.event === 'edit') {
+                layer.open({
+                    type: 2
+                    , title: "编辑部门"
+                    , content: 'views/edit/job_edit.html'
+                    , maxmin: true
+                    , area: ['600px', '400px']
+                    , btn: ['确定', '取消']
+                    , yes: function (index, layero) {
+                        var job_name = $(layero).find('iframe')[0].contentWindow.document.getElementById('job_name').value;
+                        var job_responsibility = $(layero).find('iframe')[0].contentWindow.document.getElementById('job_respon').value;
+
+                        if (job_name.length === 0 || job_responsibility.length === 0) {
+                            alert("数据格式不正确！");
+                            return false;
+                        }
+
+                        // 构建请求数据
+                        var requestData = {
+                            'position_id': data.position_id,
+                            'job_name': job_name,
+                            'job_responsibility': job_responsibility,
+                        };
+
+                        // 发送 POST 请求
+                        $.ajax({
+                            url: 'manage/jobServlet?action=updateJob', // 请求的 URL
+                            type: 'POST', // 请求类型
+                            data: requestData, // 请求数据
+                            success: function (response) {
+                                // 请求成功的回调函数
+                                console.log(response);
+                                // 刷新当前页面
+                                location.reload();
+                            },
+                            error: function (response) {
+                                // 请求失败的回调函数
+                                var responseObject = JSON.parse(response.responseText);
+                                var msg = responseObject.msg;
+                                alert(msg); // 输出 "数据格式有误！
+                            }
+                        });
+                        layer.close(index);
+                    }
+                    , btn2: function (index, layero) {
+                        layer.close(index); //关闭弹窗
+                        return false;// 开启该代码可禁止点击该按钮关闭
+                    }
+                    , success: function (layero, index) {
+                        //进行数据回显
+                        var form = layero.find('iframe').contents().find("#department_edit_form");
+                        var childFrame = layer.getChildFrame('body', index);
+                        var iframWindow = window['layui-layer-iframe' + index];
+                        childFrame.find("#job_name").val(data.position_name);
+                        childFrame.find("#job_respon").val(data.responsibilities);
+                    }
+                });
+            }
+        });
+    });
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>员工考勤管理</title>
+    <link rel="stylesheet" href="../layui/css/layui.css">
+</head>
+<body>
+
+
+
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+    <legend></legend>
+</fieldset>
+
+<div class="layui-row">
+    <div class="layui-col-xs6">
+        <div class="grid-demo grid-demo-bg1">
+            <div id="attendance_line" style="width: 100%; height: 500px;"></div>
+        </div>
+    </div>
+    <div class="layui-col-xs6">
+        <div class="grid-demo">
+            <div id="attendance_doughnut" style="width: 100%; height: 500px"></div>
+        </div>
+    </div>
+</div>
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+    <legend></legend>
+</fieldset>
+
+<div class="layui-row">
+    <table class="layui-hide" id="layTable" lay-filter="attendanceTable"></table>
+</div>
+
+<script type="text/html" id="toolbarDemo">
+    <div class="layui-btn-container">
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckData">获取选中行数据</button>
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckLength">获取选中数目</button>
+        <button class="layui-btn layui-btn-sm" lay-event="addDepartment">添加新部门</button>
+        <button class="layui-btn  layui-btn-normal layui-btn-sm" lay-event="refresh">刷新</button>
+    </div>
+</script>
+
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+
+
+
+<script type="text/javascript" src="../layui/layui.js"></script>
+<script type="text/javascript" src=""></script>
+<script type="text/javascript">
+    layui.config({
+        version: 1,
+        base: '../echarts/' //这个就是你放Echart.js的目录
+    }).use(['element', 'echarts', 'carousel', 'table', 'jquery'], function () {
+        var element = layui.element;
+        var carousel = layui.carousel;
+        var echarts = layui.echarts;
+        var table = layui.table;
+        var $ = layui.jquery;
+
+        // 初始化 ECharts 实例
+        var myChart_line = echarts.init(document.getElementById("attendance_line"));
+        var option_line;
+
+        const colors = ['#5470C6', '#EE6666'];
+        option_line = {
+            color: colors,
+            tooltip: {
+                trigger: 'none',
+                axisPointer: {
+                    type: 'cross'
+                }
+            },
+            legend: {},
+            grid: {
+                top: 70,
+                bottom: 50
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    axisTick: {
+                        alignWithLabel: true
+                    },
+                    axisLine: {
+                        onZero: false,
+                        lineStyle: {
+                            color: colors[1]
+                        }
+                    },
+                    axisPointer: {
+                        label: {
+                            formatter: function (params) {
+                                return (
+                                    'Precipitation  ' +
+                                    params.value +
+                                    (params.seriesData.length ? '：' + params.seriesData[0].data : '')
+                                );
+                            }
+                        }
+                    },
+                    // prettier-ignore
+                    data: ['2016-1', '2016-2', '2016-3', '2016-4', '2016-5', '2016-6', '2016-7', '2016-8', '2016-9', '2016-10', '2016-11', '2016-12']
+                },
+                {
+                    type: 'category',
+                    axisTick: {
+                        alignWithLabel: true
+                    },
+                    axisLine: {
+                        onZero: false,
+                        lineStyle: {
+                            color: colors[0]
+                        }
+                    },
+                    axisPointer: {
+                        label: {
+                            formatter: function (params) {
+                                return (
+                                    'Precipitation  ' +
+                                    params.value +
+                                    (params.seriesData.length ? '：' + params.seriesData[0].data : '')
+                                );
+                            }
+                        }
+                    },
+                    // prettier-ignore
+                    data: ['2015-1', '2015-2', '2015-3', '2015-4', '2015-5', '2015-6', '2015-7', '2015-8', '2015-9', '2015-10', '2015-11', '2015-12']
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value'
+                }
+            ],
+            series: [
+                {
+                    name: 'Precipitation(2015)',
+                    type: 'line',
+                    xAxisIndex: 1,
+                    smooth: true,
+                    emphasis: {
+                        focus: 'series'
+                    },
+                    data: [
+                        2.6, 5.9, 9.0, 26.4, 28.7, 70.7, 175.6, 182.2, 48.7, 18.8, 6.0, 2.3
+                    ]
+                },
+                {
+                    name: 'Precipitation(2016)',
+                    type: 'line',
+                    smooth: true,
+                    emphasis: {
+                        focus: 'series'
+                    },
+                    data: [
+                        3.9, 5.9, 11.1, 18.7, 48.3, 69.2, 231.6, 46.6, 55.4, 18.4, 10.3, 0.7
+                    ]
+                }
+            ]
+        };
+        myChart_line.setOption(option_line);
+
+        //=============================================================================
+        var myChart_doughnut = echarts.init(document.getElementById("attendance_doughnut"));
+        var option_doughnut;
+        option_doughnut = {
+            tooltip: {
+                trigger: 'item'
+            },
+            legend: {
+                top: '5%',
+                left: 'center',
+                // doesn't perfectly work with our tricks, disable it
+                selectedMode: false
+            },
+            series: [
+                {
+                    name: 'Access From',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    center: ['50%', '70%'],
+                    // adjust the start angle
+                    startAngle: 180,
+                    label: {
+                        show: true,
+                        formatter(param) {
+                            // correct the percentage
+                            return param.name + ' (' + param.percent * 2 + '%)';
+                        }
+                    },
+                    data: [
+                        { value: 1048, name: 'Search Engine' },
+                        { value: 735, name: 'Direct' },
+                        { value: 580, name: 'Email' },
+                        { value: 484, name: 'Union Ads' },
+                        { value: 300, name: 'Video Ads' },
+                        {
+                            // make an record to fill the bottom 50%
+                            value: 1048 + 735 + 580 + 484 + 300,
+                            itemStyle: {
+                                // stop the chart from rendering this piece
+                                color: 'none',
+                                decal: {
+                                    symbol: 'none'
+                                }
+                            },
+                            label: {
+                                show: false
+                            }
+                        }
+                    ]
+                }
+            ]
+        };
+        myChart_doughnut.setOption(option_doughnut);
+        //=============================================================================
+
+
+        //第一个实例
+        table.render({
+            elem: '#layTable'
+            , url: 'manage/employeeServlet?action=showEmployees' //数据接口,该接口需要自行修改
+            , toolbar: '#toolbarDemo' //开启头部工具栏，并为其绑定左侧模板
+            , defaultToolbar: ['filter', 'exports', 'print', { //自定义头部工具栏右侧图标。如无需自定义，去除该参数即可
+                title: '提示'
+                , layEvent: 'LAYTABLE_TIPS'
+                , icon: 'layui-icon-tips'
+            }]
+            , title: '用户数据表'
+            , method: 'post'
+            , page: false //开启分页
+            , cols: [[ //表头
+                //注意，field的命名类型必须是以小写字母开头，否则识别不到数据,开头之后的字段命名必须与pojo类中的命名一致，否则一样识别不到
+                {type: 'checkbox'},
+                {field: 'employee_id', title: '员工号', sort: true}
+                , {field: 'employee_name', title: '姓名'}
+                , {
+                    field: 'gender', title: '性别', sort: true,//下面一行代码为格式化数据
+                    templet: function (data) {
+                        return data.gender === 'male' ? '男' : '女';
+                    }
+                }
+                , {
+                    field: 'birthdate', title: '出生日期',
+                    templet: function (data) {
+                        const dateString = data.birthdate;
+                        const monthMap = {
+                            一月: "01",
+                            二月: "02",
+                            三月: "03",
+                            四月: "04",
+                            五月: "05",
+                            六月: "06",
+                            七月: "07",
+                            八月: "08",
+                            九月: "09",
+                            十月: "10",
+                            十一月: "11",
+                            十二月: "12"
+                        };
+                        const [monthString, dayString, yearString] = dateString.split(" ");
+                        const month = monthMap[monthString];
+                        const formattedDate = `${yearString}年${month}月${dayString.slice(0, -1)}日`;
+                        birth_tempdate = `${yearString}-${month}-${dayString.slice(0, -1)}`;
+                        return data.birthdate = formattedDate;
+                    }
+                }
+                , {field: 'phone_number', title: '联系电话'}
+                , {field: 'address', title: '地址'}
+                , {field: 'email', title: '邮箱'}
+                , {
+                    field: 'hire_date', title: '雇佣日期',
+                    templet: function (data) {
+                        const dateString = data.hire_date;
+                        const monthMap = {
+                            一月: "01",
+                            二月: "02",
+                            三月: "03",
+                            四月: "04",
+                            五月: "05",
+                            六月: "06",
+                            七月: "07",
+                            八月: "08",
+                            九月: "09",
+                            十月: "10",
+                            十一月: "11",
+                            十二月: "12"
+                        };
+                        const [monthString, dayString, yearString] = dateString.split(" ");
+                        const month = monthMap[monthString];
+                        const formattedDate = `${yearString}年${month}月${dayString.slice(0, -1)}日`;
+                        hire_tempdate = `${yearString}-${month}-${dayString.slice(0, -1)}`;
+                        return data.hire_date = formattedDate;
+                    }
+                }
+                , {
+                    field: 'position_id', title: '职位',
+                    templet: function (data) {
+                        return data.department_id === undefined ? "未赋值" : data.department_id;
+                    }
+                }
+                , {
+                    field: 'department_id', title: '所属部门',
+                    templet: function (data) {
+                        return data.department_id === undefined ? "未赋值" : data.department_id;
+                    }
+                }
+                , {field: 'right', title: '修改数据', toolbar: '#barDemo'}
+            ]]
+        });
+
+        //头工具栏事件
+        // table.on(“控件”(“表格的绑定名字”))
+        table.on('toolbar(attendanceTable)', function (obj) {
+            var checkStatus = table.checkStatus(obj.config.id);
+            switch (obj.event) {
+                case 'getCheckData':
+                    var data = checkStatus.data;
+                    layer.alert(JSON.stringify(data));
+                    break;
+                case 'getCheckLength':
+                    var data = checkStatus.data;
+                    layer.msg('选中了：' + data.length + ' 个');
+                    break;
+                case 'addEmployee':
+                    layer.open({
+                        type: 2
+                        , title: "添加员工"
+                        , content: 'views/edit/employee_add.html'
+                        , maxmin: true
+                        , area: ['750px', '600px']
+                        , btn: ['确定', '取消']
+                        , yes: function (index, layero) {
+                            var employee_id = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_id').value;
+                            var employee_name = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_name').value;
+                            var emp_gender = $(layero).find('iframe')[0].contentWindow.document.querySelector('input[name="sex"]:checked').value;
+                            var emp_birthday = $(layero).find('iframe')[0].contentWindow.document.getElementById('birthdate').value;
+                            var emp_tel = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_tel').value;
+                            var province = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz1"]').value;
+                            var city = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz2"]').value;
+                            var district = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz3"]').value;
+                            var address = province + city + district;
+                            var emp_email = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_email').value;
+                            var hire_date = $(layero).find('iframe')[0].contentWindow.document.getElementById('hire_date').value;
+                            var emp_job = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="job"]').value;
+                            var emp_department = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="department"]').value;
+                            //格式验证
+                            //验证employee_id不能重复
+                            var tableData = table.cache['layTable'];
+                            var valueExists = false;
+                            var columnName = "employee_id"; // 假设你要判断的列名是 "date"
+
+                            if (employee_id.length === 0 || !(/^\d+$/.test(employee_id))){
+                                alert("员工ID号输入有误！");
+                                return false;
+                            }
+                            for (var i = 0; i < tableData.length; i++) {
+                                if (tableData[i][columnName] === parseInt(employee_id)) {
+                                    valueExists = true;
+                                    break;
+                                }
+                            }
+                            // 根据判断结果进行相应处理
+                            if (valueExists) {
+                                layer.alert("员工ID已经存在！");
+                                return false;
+                            }
+                            if (employee_name.length === 0) {
+                                alert("姓名格式不正确！");
+                                return false;
+                            }
+                            const phoneRegex = /^1\d{10}$/;
+                            b = phoneRegex.test(emp_tel);
+                            if (b === false) {
+                                alert("电话格式不正确！");
+                                return false;
+                            }
+                            const emailRegex = /^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$/;
+                            var b = emailRegex.test(emp_email);
+                            if (b === false) {
+                                alert("邮箱格式不正确！");
+                                return false;
+                            }
+
+                            // 构建请求数据
+                            var requestData = {
+                                'employee_id': employee_id,
+                                'employee_name': employee_name,
+                                'gender': emp_gender,
+                                'birthdate': emp_birthday,
+                                'phone_number': emp_tel,
+                                'address': address,
+                                'email': emp_email,
+                                'hire_date': hire_date,
+                                'position_id': emp_job,
+                                'department_id': emp_department
+                            };
+
+                            // 发送 POST 请求
+                            $.ajax({
+                                url: 'manage/employeeServlet?action=addEmployee', // 请求的 URL
+                                type: 'POST', // 请求类型
+                                data: requestData, // 请求数据
+                                success: function (response) {
+                                    // 请求成功的回调函数
+                                    console.log('请求成功', response);
+                                    // 刷新当前页面
+                                    location.reload();
+                                },
+                                error: function (xhr, status, error) {
+                                    // 请求失败的回调函数
+                                    console.error('请求失败', error);
+                                }
+                            });
+                            layer.close(index);
+                        }
+                        , btn2: function (index, layero) {
+                            layer.close(index); //关闭弹窗
+                            return false;// 开启该代码可禁止点击该按钮关闭
+                        }
+                        , success: function (layero, index) {
+                        }
+                    });
+                    break;
+                //自定义头工具栏右侧图标 - 提示
+                case 'LAYTABLE_TIPS':
+                    layer.alert('这是工具栏右侧自定义的一个图标按钮');
+                    break;
+            }
+            ;
+        });
+
+        //监听行工具事件
+        table.on('tool(attendanceTable)', function (obj) {
+            var data = obj.data; //获得当前行数据
+            var layEvent = obj.event; //获得 lay-event 对应的值（也可以是表头的 event 参数对应的值）
+            if (obj.event === 'del') {
+                layer.confirm('确认删除吗？', function (index) {
+                    obj.del();
+                    // 发送 POST 请求
+                    $.ajax({
+                        url: 'manage/employeeServlet?action=deleteEmployee', // 请求的 URL
+                        type: 'POST', // 请求类型
+                        data: {
+                            'employee_id': data.employee_id
+                        }, // 请求数据
+                        success: function (response) {
+                            // 刷新当前页面
+                            location.reload();
+                        },
+                        error: function (xhr, status, error) {
+                            // 请求失败的回调函数
+                            console.error('请求失败', error);
+                        }
+                    });
+                });
+            } else if (obj.event === 'edit') {
+                layer.open({
+                    type: 2
+                    , title: "编辑员工信息"
+                    , content: 'views/edit/employee_edit.html'
+                    , maxmin: true
+                    , area: ['750px', '600px']
+                    , btn: ['确定', '取消']
+                    , yes: function (index, layero) {
+                        var employee_name = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_name').value;
+                        var emp_gender = $(layero).find('iframe')[0].contentWindow.document.querySelector('input[name="sex"]:checked').value;
+                        var emp_birthday = $(layero).find('iframe')[0].contentWindow.document.getElementById('birthdate').value;
+                        var emp_tel = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_tel').value;
+                        var province = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz1"]').value;
+                        var city = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz2"]').value;
+                        var district = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz3"]').value;
+                        var address = province + city + district;
+                        var emp_email = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_email').value;
+                        var hire_date = $(layero).find('iframe')[0].contentWindow.document.getElementById('hire_date').value;
+                        var emp_job = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="job"]').value;
+                        var emp_department = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="department"]').value;
+                        //格式验证
+                        if (employee_name.length === 0) {
+                            alert("姓名格式不正确！");
+                            return false;
+                        }
+                        const phoneRegex = /^1\d{10}$/;
+                        b = phoneRegex.test(emp_tel);
+                        if (b === false) {
+                            alert("电话格式不正确！");
+                            return false;
+                        }
+                        const emailRegex = /^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$/;
+                        var b = emailRegex.test(emp_email);
+                        if (b === false) {
+                            alert("邮箱格式不正确！");
+                            return false;
+                        }
+
+                        // 构建请求数据
+                        var requestData = {
+                            'employee_id': data.employee_id,
+                            'employee_name': employee_name,
+                            'gender': emp_gender,
+                            'birthdate': emp_birthday,
+                            'phone_number': emp_tel,
+                            'address': address,
+                            'email': emp_email,
+                            'hire_date': hire_date,
+                            'position_id': emp_job,
+                            'department_id': emp_department
+                        };
+
+                        // 发送 POST 请求
+                        $.ajax({
+                            url: 'manage/employeeServlet?action=updateEmployee', // 请求的 URL
+                            type: 'POST', // 请求类型
+                            data: requestData, // 请求数据
+                            success: function (response) {
+                                // 请求成功的回调函数
+                                console.log('请求成功', response);
+                                // 刷新当前页面
+                                location.reload();
+                            },
+                            error: function (xhr, status, error) {
+                                // 请求失败的回调函数
+                                console.error('请求失败', error);
+                            }
+                        });
+                        layer.close(index);
+                    }
+                    , btn2: function (index, layero) {
+                        layer.close(index); //关闭弹窗
+                        return false;// 开启该代码可禁止点击该按钮关闭
+                    }
+                    , success: function (layero, index) {
+                        //进行数据回显
+                        var form = layero.find('iframe').contents().find("#employee_edit_form");
+                        var childFrame = layer.getChildFrame('body', index);
+                        var iframWindow = window['layui-layer-iframe' + index];
+                        childFrame.find("#emp_name").val(data.employee_name);
+                        childFrame.find("#emp_tel").val(data.phone_number);
+                        childFrame.find("#emp_email").val(data.email);
+                        childFrame.find("#birthdate").val(birth_tempdate);
+                        childFrame.find("#hire_date").val(hire_tempdate);
+                    }
+                });
+            }
+        });
+    });
+</script>
+</body>
+</html>

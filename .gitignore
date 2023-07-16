@@ -1,0 +1,10 @@
+# 忽略编译输出文件
+target/
+.idea/
+out/
+#web/assets
+#web/echarts
+#web/jsencrypt-master
+#web/layui
+#web/WEB-INF
+src/com/by/coursedesign/test

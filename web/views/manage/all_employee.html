@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Layui</title>
+    <base href="http://localhost:8080/sql_design/">
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="layui/css/layui.css" media="all">
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.4/jquery.js"></script>
+    <!-- 注意：如果你直接复制所有代码到本地，上述css路径需要改成你本地的 -->
+</head>
+<body>
+<div>
+    <fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+        <legend>数据总览</legend>
+        <div class="layui-row">
+            <form class="layui-form" action="">
+                <div class=" layui-col-md8" style="padding-left: 500px">
+                    <div class="layui-form-item">
+                        <div class="layui-input-inline">
+                            <select name="gender">
+                                <option value="0" disabled>请选择性别</option>
+                                <option value="1">男</option>
+                                <option value="2">女</option>
+                            </select>
+                        </div>
+                        <div class="layui-input-inline">
+                            <select name="age">
+                                <option value="0" disabled>请选择年龄范围</option>
+                                <option value="20">20岁以下</option>
+                                <option value="30">30岁以下</option>
+                                <option value="40">40岁以下</option>
+                                <option value="50">50岁以下</option>
+                                <option value="10">50岁及其以上</option>
+                            </select>
+                        </div>
+                        <div class="layui-input-inline">
+                            <select name="qualification">
+                                <option value="0" disabled>请选择学历标准</option>
+                                <option value="1">本科学历以下</option>
+                                <option value="2">本科文凭</option>
+                                <option value="3">硕士文凭</option>
+                                <option value="4">硕士以上学历</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="layui-col-md4   ">
+                    <div class="layui-form-item">
+                        <div class="layui-input-block">
+                            <button class="layui-btn layui-btn-normal" lay-submit lay-filter="formSubmit">进行筛选</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </fieldset>
+</div>
+<!--echarts图表区-->
+<div class="layui-row">
+    <div class="layui-col-xs4">
+        <div class="grid-demo grid-demo-bg1">
+            <div id="ageGroup" style="width: 100%; height: 500px;"></div>
+        </div>
+    </div>
+    <div class="layui-col-xs4">
+        <div class="grid-demo">
+            <div id="genderGroup" style="width: 100%; height: 500px;"></div>
+        </div>
+    </div>
+    <div class="layui-col-xs4">
+        <div class="grid-demo">
+            <div id="educationGroup" style="width: 100%; height: 500px;"></div>
+        </div>
+    </div>
+</div>
+<!--echarts图表区-->
+
+<table class="layui-hide" id="layTable" lay-filter="employeeTable"></table>
+
+<script type="text/html" id="toolbarDemo">
+    <div class="layui-btn-container">
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckData">获取选中行数据</button>
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckLength">获取选中数目</button>
+        <button class="layui-btn  layui-btn-normal layui-btn-sm" lay-event="addEmployee">添加新员工</button>
+        <button class="layui-btn  layui-btn-normal layui-btn-sm" lay-event="refresh">查看所有数据</button>
+    </div>
+</script>
+
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+    <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="train">进行培训</a>
+</script>
+
+
+<script src="layui/layui.js" charset="utf-8"></script>
+<!-- 注意：如果你直接复制所有代码到本地，上述 JS 路径需要改成你本地的 -->
+
+<script>
+    layui.config({
+        version: 1,
+        base: 'echarts/' //这个就是你放Echart.js的目录
+    }).use(['element', 'echarts', 'carousel', 'table', 'jquery', 'form'], function () {
+        var table = layui.table;
+        var $ = layui.jquery;
+        var form = layui.form;
+        var echarts = layui.echarts;
+        var element = layui.element;
+        var carousel = layui.carousel;
+        // 初始化 ECharts 实例
+        var ageGroupChart = echarts.init(document.getElementById("ageGroup"));
+        var educationGroupChart = echarts.init(document.getElementById("educationGroup"));
+        var genderGroupChart = echarts.init(document.getElementById("genderGroup"));
+
+
+        var optionAge;
+        var optionGender;
+        var optionEducation;
+
+        var genderArray = [0, 0];
+        var ageArray = [0, 0, 0, 0, 0];
+        var educationArray = [0, 0, 0, 0];
+
+        //以下两个变量方便后续调用
+        var birth_tempdate;
+        var hire_tempdate;
+
+
+        //第一个实例
+        var tableRender = table.render({
+            elem: '#layTable'
+            , id: 'layTable'
+            , url: 'manage/employeeServlet?action=showEmployees' //数据接口,该接口需要自行修改
+            , toolbar: '#toolbarDemo' //开启头部工具栏，并为其绑定左侧模板
+            , defaultToolbar: ['filter', 'exports', 'print', { //自定义头部工具栏右侧图标。如无需自定义，去除该参数即可
+                title: '提示'
+                , layEvent: 'LAYTABLE_TIPS'
+                , icon: 'layui-icon-tips'
+            }]
+            , title: '用户数据表'
+            , method: 'post'
+            , page: false //开启分页
+            , cols: [[ //表头
+                //注意，field的命名类型必须是以小写字母开头，否则识别不到数据,开头之后的字段命名必须与pojo类中的命名一致，否则一样识别不到
+                {type: 'checkbox'},
+                {field: 'employee_id', title: '员工号', sort: true}
+                , {field: 'employee_name', title: '姓名'}
+                , {
+                    field: 'gender', title: '性别', sort: true,//下面一行代码为格式化数据
+                    templet: function (data) {
+                        if (data.gender === 'male') {
+                            genderArray[0] += 1;
+                        } else {
+                            genderArray[1] += 1;
+                        }
+                        return data.gender === 'male' ? '男' : '女';
+                    }
+                }
+                , {
+                    field: 'birthdate', title: '出生日期',
+                    templet: function (data) {
+                        const dateString = data.birthdate;
+                        const monthMap = {
+                            一月: "01",
+                            二月: "02",
+                            三月: "03",
+                            四月: "04",
+                            五月: "05",
+                            六月: "06",
+                            七月: "07",
+                            八月: "08",
+                            九月: "09",
+                            十月: "10",
+                            十一月: "11",
+                            十二月: "12"
+                        };
+                        const [monthString, dayString, yearString] = dateString.split(" ");
+                        const month = monthMap[monthString];
+                        const formattedDate = `${yearString}年${month}月${dayString.slice(0, -1)}日`;
+                        birth_tempdate = `${yearString}-${month}-${dayString.slice(0, -1)}`;
+                        return data.birthdate = formattedDate;
+                    }
+                }
+                , {
+                    field: 'age', title: '年龄',
+                    templet: function (data) {
+                        var dateString = data.birthdate;
+                        var chineseMonths = {
+                            一月: 0,
+                            二月: 1,
+                            三月: 2,
+                            四月: 3,
+                            五月: 4,
+                            六月: 5,
+                            七月: 6,
+                            八月: 7,
+                            九月: 8,
+                            十月: 9,
+                            十一月: 10,
+                            十二月: 11
+                        };
+
+                        var parts = dateString.split(' ');
+                        var month = chineseMonths[parts[0]];
+                        var day = parseInt(parts[1].replace(',', ''));
+                        var year = parseInt(parts[2]);
+                        var birthDate = new Date(year, month, day);
+                        var currentDate = new Date();
+
+                        var ageDiff = currentDate.getFullYear() - birthDate.getFullYear();
+
+                        var currentMonth = currentDate.getMonth();
+                        var birthMonth = birthDate.getMonth();
+
+                        if (currentMonth < birthMonth || (currentMonth === birthMonth && currentDate.getDate() < birthDate.getDate())) {
+                            ageDiff--;
+                        }
+                        if (ageDiff < 20) {
+                            ageArray[0] += 1;
+                        } else if (ageDiff < 30) {
+                            ageArray[1] += 1;
+                        } else if (ageDiff < 40) {
+                            ageArray[2] += 1;
+                        } else if (ageDiff < 50) {
+                            ageArray[3] += 1;
+                        } else {
+                            ageArray[4] += 1;
+                        }
+                        return ageDiff;
+                    }
+                }
+                , {field: 'phone_number', title: '联系电话'}
+                , {field: 'address', title: '地址'}
+                , {field: 'email', title: '邮箱'}
+                , {
+                    field: 'hire_date', title: '雇佣日期',
+                    templet: function (data) {
+                        const dateString = data.hire_date;
+                        const monthMap = {
+                            一月: "01",
+                            二月: "02",
+                            三月: "03",
+                            四月: "04",
+                            五月: "05",
+                            六月: "06",
+                            七月: "07",
+                            八月: "08",
+                            九月: "09",
+                            十月: "10",
+                            十一月: "11",
+                            十二月: "12"
+                        };
+                        const [monthString, dayString, yearString] = dateString.split(" ");
+                        const month = monthMap[monthString];
+                        const formattedDate = `${yearString}年${month}月${dayString.slice(0, -1)}日`;
+                        hire_tempdate = `${yearString}-${month}-${dayString.slice(0, -1)}`;
+                        return data.hire_date = formattedDate;
+                    }
+                }
+                , {
+                    field: 'position_id', title: '职位',
+                    templet: function (data) {
+                        var positionId = parseInt(data.position_id);
+                        const roles = {
+                            1: '经理',
+                            2: '工程师',
+                            3: '销售代表',
+                            4: '人力资源专员',
+                            5: '财务主管',
+                            6: '市场营销经理',
+                            7: '生产主管',
+                            8: '客户服务代表'
+                        };
+                        return data.position_id === undefined ? "未赋值" : roles[positionId];
+                    }
+                }
+                , {
+                    field: 'department_id', title: '所属部门',
+                    templet: function (data) {
+                        var departmentId = parseInt(data.department_id);
+                        const depart = {
+                            1: '销售部',
+                            2: '市场部'
+                        };
+
+                        return data.department_id === undefined ? "未赋值" : depart[departmentId];
+                    }
+                }
+                , {
+                    field: 'qualification', title: '个人文凭',
+                    templet: function (data) {
+                        var qualification = data.qualification;
+                        if (qualification === "本科学历以下") {
+                            educationArray[0] += 1;
+                        } else if (qualification === "本科文凭") {
+                            educationArray[1] += 1;
+                        } else if (qualification === "硕士文凭") {
+                            educationArray[2] += 1;
+                        } else if (qualification === "硕士以上学历") {
+                            educationArray[3] += 1;
+                        }
+                        return qualification;
+                    }
+                }
+                , {field: 'right', width: '15%', title: '修改数据', toolbar: '#barDemo'}
+            ]],
+            done: function (res, curr, count) {
+                optionEducation = {
+                    title: {
+                        text: '学历分布情况',
+                        subtext: '数据一览',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left'
+                    },
+                    series: [
+                        {
+                            name: 'Access From',
+                            type: 'pie',
+                            radius: '50%',
+                            data: [
+                                {value: educationArray[0], name: '本科学历以下'},
+                                {value: educationArray[1], name: '本科文凭'},
+                                {value: educationArray[2], name: '硕士文凭'},
+                                {value: educationArray[3], name: '硕士以上学历'}
+                            ],
+                            emphasis: {
+                                itemStyle: {
+                                    shadowBlur: 10,
+                                    shadowOffsetX: 0,
+                                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                }
+                            }
+                        }
+                    ]
+                };
+                educationGroupChart.setOption(optionEducation);
+                optionAge = {
+                    xAxis: {
+                        type: 'category',
+                        data: ['20岁以下', '20-30岁', '30-40岁', '40-50岁', '50岁及以上']
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    series: [
+                        {
+                            data: ageArray,
+                            type: 'bar'
+                        }
+                    ]
+                };
+                ageGroupChart.setOption(optionAge);
+                optionGender = {
+                    tooltip: {
+                        trigger: 'item'
+                    },
+                    legend: {
+                        top: '5%',
+                        left: 'center'
+                    },
+                    series: [
+                        {
+                            name: 'Access From',
+                            type: 'pie',
+                            radius: ['40%', '70%'],
+                            avoidLabelOverlap: false,
+                            itemStyle: {
+                                borderRadius: 10,
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            },
+                            label: {
+                                show: false,
+                                position: 'center'
+                            },
+                            emphasis: {
+                                label: {
+                                    show: true,
+                                    fontSize: 40,
+                                    fontWeight: 'bold'
+                                }
+                            },
+                            labelLine: {
+                                show: false
+                            },
+                            data: [
+                                {value: genderArray[0], name: '男性'},
+                                {value: genderArray[1], name: '女性'},
+                            ]
+                        }
+                    ]
+                };
+                genderGroupChart.setOption(optionGender);
+            }
+        });
+
+        // 监听表单提交事件
+        form.on('submit(formSubmit)', function (data) {
+            // 在这里编写提交表单的逻辑
+            genderArray = [0, 0];
+            ageArray = [0, 0, 0, 0, 0];
+            educationArray = [0, 0, 0, 0];
+            var age = data.field.age;
+            var gender = data.field.gender;
+            var qualification = data.field.qualification;
+            // url: 'manage/employeeServlet?action=queryFilter' // 请求的 URL
+            //执行搜索重载
+            table.reload('layTable', {
+                url: 'manage/employeeServlet?action=queryFilter',
+                method: 'post',
+                page: {
+                    curr: 1
+                }
+                , where:
+                    {
+                        age: data.field.age,
+                        gender: data.field.gender,
+                        qualification: data.field.qualification
+                    }
+
+            }, 'data');
+            return false;
+        });
+
+
+        //头工具栏事件
+        // table.on(“控件”(“表格的绑定名字”))
+        table.on('toolbar(employeeTable)', function (obj) {
+            var checkStatus = table.checkStatus(obj.config.id);
+            switch (obj.event) {
+                case 'getCheckData':
+                    var data = checkStatus.data;
+                    layer.alert(JSON.stringify(data));
+                    break;
+                case 'getCheckLength':
+                    var data = checkStatus.data;
+                    layer.msg('选中了：' + data.length + ' 个');
+                    break;
+                case 'refresh':
+                    location.reload();
+                    break;
+                case 'addEmployee':
+                    layer.open({
+                        type: 2
+                        , title: "添加员工"
+                        , content: 'views/edit/employee_add.html'
+                        , maxmin: true
+                        , area: ['750px', '600px']
+                        , btn: ['确定', '取消']
+                        , yes: function (index, layero) {
+                            var employee_id = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_id').value;
+                            var employee_name = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_name').value;
+                            var emp_gender = $(layero).find('iframe')[0].contentWindow.document.querySelector('input[name="sex"]:checked').value;
+                            var emp_birthday = $(layero).find('iframe')[0].contentWindow.document.getElementById('birthdate').value;
+                            var emp_tel = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_tel').value;
+                            var province = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz1"]').value;
+                            var city = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz2"]').value;
+                            var district = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz3"]').value;
+                            var address = province + city + district;
+                            var emp_email = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_email').value;
+                            var hire_date = $(layero).find('iframe')[0].contentWindow.document.getElementById('hire_date').value;
+                            var qualification = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="qualification"]').value;
+                            var emp_job = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="job"]').value;
+                            var emp_department = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="department"]').value;
+                            //格式验证
+                            //验证employee_id不能重复
+                            var tableData = table.cache['layTable'];
+                            var valueExists = false;
+                            var columnName = "employee_id"; // 假设你要判断的列名是 "date"
+
+                            if (employee_id.length === 0 || !(/^\d+$/.test(employee_id))) {
+                                alert("员工ID号输入有误！");
+                                return false;
+                            }
+                            for (var i = 0; i < tableData.length; i++) {
+                                if (tableData[i][columnName] === parseInt(employee_id)) {
+                                    valueExists = true;
+                                    break;
+                                }
+                            }
+                            // 根据判断结果进行相应处理
+                            if (valueExists) {
+                                layer.alert("员工ID已经存在！");
+                                return false;
+                            }
+                            if (employee_name.length === 0) {
+                                alert("姓名格式不正确！");
+                                return false;
+                            }
+                            const phoneRegex = /^1\d{10}$/;
+                            b = phoneRegex.test(emp_tel);
+                            if (b === false) {
+                                alert("电话格式不正确！");
+                                return false;
+                            }
+                            const emailRegex = /^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$/;
+                            var b = emailRegex.test(emp_email);
+                            if (b === false) {
+                                alert("邮箱格式不正确！");
+                                return false;
+                            }
+
+                            // 构建请求数据
+                            var requestData = {
+                                'employee_id': employee_id,
+                                'employee_name': employee_name,
+                                'gender': emp_gender,
+                                'birthdate': emp_birthday,
+                                'phone_number': emp_tel,
+                                'address': address,
+                                'email': emp_email,
+                                'hire_date': hire_date,
+                                'qualification': qualification,
+                                'position_id': emp_job,
+                                'department_id': emp_department
+                            };
+
+                            // 发送 POST 请求
+                            $.ajax({
+                                url: 'manage/employeeServlet?action=addEmployee', // 请求的 URL
+                                type: 'POST', // 请求类型
+                                data: requestData, // 请求数据
+                                success: function (response) {
+                                    // 请求成功的回调函数
+                                    console.log('请求成功', response);
+                                    // 刷新当前页面
+                                    location.reload();
+                                },
+                                error: function (xhr, status, error) {
+                                    // 请求失败的回调函数
+                                    console.error('请求失败', error);
+                                }
+                            });
+                            layer.close(index);
+                        }
+                        , btn2: function (index, layero) {
+                            layer.close(index); //关闭弹窗
+                            return false;// 开启该代码可禁止点击该按钮关闭
+                        }
+                        , success: function (layero, index) {
+                        }
+                    });
+                    break;
+                //自定义头工具栏右侧图标 - 提示
+                case 'LAYTABLE_TIPS':
+                    layer.alert('这是工具栏右侧自定义的一个图标按钮');
+                    break;
+            }
+            ;
+        });
+
+        //监听行工具事件
+        table.on('tool(employeeTable)', function (obj) {
+            var data = obj.data; //获得当前行数据
+            var layEvent = obj.event; //获得 lay-event 对应的值（也可以是表头的 event 参数对应的值）
+            if (obj.event === 'del') {
+                layer.confirm('确认删除吗？', function (index) {
+                    obj.del();
+                    // 发送 POST 请求
+                    $.ajax({
+                        url: 'manage/employeeServlet?action=deleteEmployee', // 请求的 URL
+                        type: 'POST', // 请求类型
+                        data: {
+                            'employee_id': data.employee_id
+                        }, // 请求数据
+                        success: function (response) {
+                            // 刷新当前页面
+                            location.reload();
+                        },
+                        error: function (xhr, status, error) {
+                            // 请求失败的回调函数
+                            console.error('请求失败', error);
+                        }
+                    });
+                });
+            } else if (obj.event === 'edit') {
+                layer.open({
+                    type: 2
+                    , title: "编辑员工信息"
+                    , content: 'views/edit/employee_edit.html'
+                    , maxmin: true
+                    , area: ['750px', '600px']
+                    , btn: ['确定', '取消']
+                    , yes: function (index, layero) {
+                        var employee_name = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_name').value;
+                        var emp_gender = $(layero).find('iframe')[0].contentWindow.document.querySelector('input[name="sex"]:checked').value;
+                        var emp_birthday = $(layero).find('iframe')[0].contentWindow.document.getElementById('birthdate').value;
+                        var emp_tel = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_tel').value;
+                        var province = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz1"]').value;
+                        var city = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz2"]').value;
+                        var district = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="quiz3"]').value;
+                        var address = province + city + district;
+                        var qualification = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="qualification"]').value;
+                        var emp_email = $(layero).find('iframe')[0].contentWindow.document.getElementById('emp_email').value;
+                        var hire_date = $(layero).find('iframe')[0].contentWindow.document.getElementById('hire_date').value;
+                        var emp_job = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="job"]').value;
+                        var emp_department = $(layero).find('iframe')[0].contentWindow.document.querySelector('select[name="department"]').value;
+                        //格式验证
+                        if (employee_name.length === 0 || qualification.length === 0) {
+                            alert("数据格式不正确！");
+                            return false;
+                        }
+                        const phoneRegex = /^1\d{10}$/;
+                        b = phoneRegex.test(emp_tel);
+                        if (b === false) {
+                            alert("电话格式不正确！");
+                            return false;
+                        }
+                        const emailRegex = /^[\w-]+(\.[\w-]+)*@[\w-]+(\.[\w-]+)+$/;
+                        var b = emailRegex.test(emp_email);
+                        if (b === false) {
+                            alert("邮箱格式不正确！");
+                            return false;
+                        }
+
+                        // 构建请求数据
+                        var requestData = {
+                            'employee_id': data.employee_id,
+                            'employee_name': employee_name,
+                            'gender': emp_gender,
+                            'birthdate': emp_birthday,
+                            'phone_number': emp_tel,
+                            'address': address,
+                            'email': emp_email,
+                            'qualification': qualification,
+                            'hire_date': hire_date,
+                            'position_id': emp_job,
+                            'department_id': emp_department
+                        };
+
+                        // 发送 POST 请求
+                        $.ajax({
+                            url: 'manage/employeeServlet?action=updateEmployee', // 请求的 URL
+                            type: 'POST', // 请求类型
+                            data: requestData, // 请求数据
+                            success: function (response) {
+                                // 请求成功的回调函数
+                                console.log('请求成功', response);
+                                // 刷新当前页面
+                                location.reload();
+                            },
+                            error: function (xhr, status, error) {
+                                // 请求失败的回调函数
+                                console.error('请求失败', error);
+                            }
+                        });
+                        layer.close(index);
+                    }
+                    , btn2: function (index, layero) {
+                        layer.close(index); //关闭弹窗
+                        return false;// 开启该代码可禁止点击该按钮关闭
+                    }
+                    , success: function (layero, index) {
+                        //进行数据回显
+                        var form = layero.find('iframe').contents().find("#employee_edit_form");
+                        var childFrame = layer.getChildFrame('body', index);
+                        var iframWindow = window['layui-layer-iframe' + index];
+                        childFrame.find("#emp_name").val(data.employee_name);
+                        childFrame.find("#emp_tel").val(data.phone_number);
+                        childFrame.find("#emp_email").val(data.email);
+                        childFrame.find("#birthdate").val(birth_tempdate);
+                        childFrame.find("#hire_date").val(hire_tempdate);
+                        childFrame.find("#qualification").val(data.qualification);
+                    }
+                });
+            } else if (obj.event === 'train') {
+                layer.open({
+                    type: 2
+                    , title: "编辑员工信息"
+                    , content: 'views/edit/emp_training_add.html'
+                    , maxmin: true
+                    , area: ['500px', '500px']
+                    , btn: ['确定', '取消']
+                    , yes: function (index, layero) {
+                        var train_id = $(layero).find('iframe')[0].contentWindow.document.getElementById('train_id').value;
+
+                        if (!(train_id.length === 8)) {
+                            alert("格式不正确！");
+                            return false;
+                        }
+
+                        // 构建请求数据
+                        var requestData = {
+                            'employee_id': data.employee_id,
+                            'train_id': train_id,
+                        };
+
+                        // 发送 POST 请求
+                        $.ajax({
+                            url: 'manage/emptrainingServlet?action=startTrain', // 请求的 URL
+                            type: 'POST', // 请求类型
+                            data: requestData, // 请求数据
+                            success: function (response) {
+                                // 请求成功的回调函数
+                                console.log('请求成功', response);
+                                // 刷新当前页面
+                                location.reload();
+                            },
+                            error: function (response) {
+                                // 请求失败的回调函数
+                                var responseObject = JSON.parse(response.responseText);
+                                var msg = responseObject.msg;
+                                alert(msg); // 输出 "数据格式有误！
+                            }
+                        });
+                        layer.close(index);
+                    }
+                    , btn2: function (index, layero) {
+                        layer.close(index); //关闭弹窗
+                        return false;// 开启该代码可禁止点击该按钮关闭
+                    }
+                    , success: function (layero, index) {
+                        //进行数据回显
+                        var form = layero.find('iframe').contents().find("#employee_edit_form");
+                        var childFrame = layer.getChildFrame('body', index);
+                        var iframWindow = window['layui-layer-iframe' + index];
+                        childFrame.find("#emp_name").val(data.employee_name);
+                        childFrame.find("#emp_tel").val(data.phone_number);
+                        childFrame.find("#emp_email").val(data.email);
+                        childFrame.find("#birthdate").val(birth_tempdate);
+                        childFrame.find("#hire_date").val(hire_tempdate);
+                    }
+                });
+            }
+        });
+    })
+    ;
+</script>
+
+
+</body>
+</html>
